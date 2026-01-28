@@ -184,15 +184,30 @@
                                         </div>
                                         
                                         <!-- Общая сумма -->
-                                        <div class="mb-3">
-                                            <label for="total_amount" class="form-label">Общая сумма сделки (₽) *</label>
-                                            <input type="number" class="form-control @error('total_amount') is-invalid @enderror" 
-                                                   id="total_amount" name="total_amount" step="0.01" min="0"
-                                                   value="{{ old('total_amount') }}" required>
-                                            @error('total_amount')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                 <!-- Общая сумма сделки (рассчитывается автоматически) -->
+<div class="col-md-6">
+    <div class="form-group">
+        <label for="total_amount">Общая сумма сделки *</label>
+        <div class="input-group">
+            <input type="number" 
+                   class="form-control @error('total_amount') is-invalid @enderror" 
+                   id="total_amount" 
+                   name="total_amount" 
+                   value="{{ old('total_amount', $deal->total_amount ?? '') }}"
+                   step="0.01" 
+                   min="0" 
+                   max="999999999.99" 
+                   readonly> <!-- УБРАЛИ required, ДОБАВИЛИ readonly -->
+            <span class="input-group-text">₽</span>
+        </div>
+        @error('total_amount')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+        <small class="form-text text-muted">
+            Рассчитывается автоматически: (Сумма платежа × Количество платежей) + Первоначальный взнос
+        </small>
+    </div>
+</div>
                                         
                                         <!-- Первоначальный взнос -->
                                         <div class="mb-3">
@@ -647,7 +662,62 @@ document.addEventListener('DOMContentLoaded', function() {
         `)
         .appendTo('head');
 });
-</script>
-@endpush
 
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Находим все нужные поля
+    const paymentAmountInput = document.getElementById('payment_amount');
+    const paymentCountInput = document.getElementById('payment_count');
+    const initialPaymentInput = document.getElementById('initial_payment');
+    const totalAmountInput = document.getElementById('total_amount');
+    
+    // Функция для расчёта общей суммы
+    function calculateTotalAmount() {
+        // Получаем значения из полей (или 0, если пусто)
+        const paymentAmount = parseFloat(paymentAmountInput.value) || 0;
+        const paymentCount = parseInt(paymentCountInput.value) || 0;
+        const initialPayment = parseFloat(initialPaymentInput.value) || 0;
+        
+        // Расчёт: (сумма платежа × количество платежей) + первоначальный взнос
+        const calculatedTotal = (paymentAmount * paymentCount) + initialPayment;
+        
+        // Обновляем поле общей суммы
+        if (totalAmountInput) {
+            totalAmountInput.value = calculatedTotal.toFixed(2);
+        }
+    }
+    
+    // Добавляем обработчики событий на изменение значений
+    if (paymentAmountInput) {
+        paymentAmountInput.addEventListener('input', calculateTotalAmount);
+        paymentAmountInput.addEventListener('change', calculateTotalAmount);
+    }
+    
+    if (paymentCountInput) {
+        paymentCountInput.addEventListener('input', calculateTotalAmount);
+        paymentCountInput.addEventListener('change', calculateTotalAmount);
+    }
+    
+    if (initialPaymentInput) {
+        initialPaymentInput.addEventListener('input', calculateTotalAmount);
+        initialPaymentInput.addEventListener('change', calculateTotalAmount);
+    }
+    
+    // Выполняем первоначальный расчёт при загрузке страницы
+    calculateTotalAmount();
+    
+    // Также пересчитываем при загрузке, если есть старые значения
+    window.addEventListener('load', calculateTotalAmount);
+});
+
+
+
+
+</script>
+
+
+@endpush
 @endsection
