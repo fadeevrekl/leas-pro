@@ -347,71 +347,99 @@
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @foreach($deal->payments as $payment)
-                                    <tr class="{{ $payment->is_overdue ? 'table-danger' : '' }}">
-                                        <td>
-                                            @if($payment->payment_number === 0)
-                                                <span class="badge bg-deal-end">Первоначальный</span>
-                                            @else
-                                                {{ $payment->payment_number }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            {{ $payment->due_date->format('d.m.Y') }}
-                                            @if($payment->is_overdue)
-                                                <br>
-                                                <small class="text-danger">
-                                                    Просрочено на {{ $payment->days_overdue }} дн.
-                                                </small>
-                                            @endif
-                                        </td>
-                                        <td>{{ $payment->formatted_amount }}</td>
-                                        <td>
-                                            @php
-                                                $paymentStatusColors = [
-                                                    'pending' => 'deal-active',
-                                                    'paid' => 'free',
-                                                    'overdue' => 'deal-overdue'
-                                                ];
-                                            @endphp
-                                            <span class="badge bg-{{ $paymentStatusColors[$payment->status] ?? 'secondary' }}">
-                                                {{ $payment->status_text }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            @if($payment->paid_at)
-                                                {{ $payment->paid_at->format('d.m.Y H:i') }}
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($payment->payment_method)
-                                                {{ $payment->payment_method_text }}
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($payment->status === 'pending')
-                                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" 
-                                                        data-bs-target="#registerPaymentModal" 
-                                                        data-payment-id="{{ $payment->id }}"
-                                                        data-payment-amount="{{ $payment->amount }}">
-                                                    <i class="fas fa-money-bill-coin"></i> Оплатить
-                                                </button>
-                                            @elseif($payment->status === 'paid')
-                                                <button class="btn btn-sm btn-info payment-details-btn" 
-                                                        data-payment-id="{{ $payment->id }}"
-                                                        title="Детали платежа">
-                                                    <i class="fas fa-info-circle me-2"></i> Подробности
-                                                </button>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
+                         <tbody>
+    @foreach($deal->payments as $payment)
+    <tr class="{{ $payment->is_overdue ? 'table-danger' : '' }}">
+        <td>
+            @if($payment->payment_number === 0)
+                <span class="badge bg-deal-end">Первоначальный</span>
+            @else
+                {{ $payment->payment_number }}
+            @endif
+        </td>
+        <td>
+            {{ $payment->due_date->format('d.m.Y') }}
+            @if($payment->is_overdue && !$payment->is_deferred)
+                <br>
+                <small class="text-danger">
+                    Просрочено на {{ $payment->days_overdue }} дн.
+                </small>
+            @endif
+        </td>
+        <td>
+            @if($payment->is_deferred)
+                <span class="text-warning" title="Отсрочка">
+                    <i class="fas fa-clock me-1"></i> 0 ₽
+                </span>
+            @else
+                {{ $payment->formatted_amount }}
+            @endif
+        </td>
+        <td>
+            @php
+                $paymentStatusColors = [
+                    'pending' => 'deal-active',
+                    'paid' => 'free',
+                    'overdue' => 'deal-overdue'
+                ];
+                
+                // Определяем класс для бейджа
+                if ($payment->is_deferred) {
+                    $badgeClass = 'warning'; // Желтый для отсрочки
+                    $statusText = 'Отсрочка';
+                } else {
+                    $badgeClass = $paymentStatusColors[$payment->status] ?? 'secondary';
+                    $statusText = $payment->status_text;
+                }
+            @endphp
+            <span class="badge bg-{{ $badgeClass }}">
+                @if($payment->is_deferred)
+                    <i class="fas fa-clock me-1"></i>
+                @endif
+                {{ $statusText }}
+            </span>
+        </td>
+        <td>
+            @if($payment->paid_at)
+                {{ $payment->paid_at->format('d.m.Y H:i') }}
+            @else
+                -
+            @endif
+        </td>
+        <td>
+            @if($payment->payment_method)
+                {{ $payment->payment_method_text }}
+            @else
+                -
+            @endif
+        </td>
+    <td>
+    @if($payment->status === 'pending' || $payment->is_deferred)
+        <button class="btn btn-sm btn-success" data-bs-toggle="modal" 
+                data-bs-target="#registerPaymentModal" 
+                data-payment-id="{{ $payment->id }}"
+                data-payment-amount="{{ $payment->is_deferred ? $payment->getOriginal('amount') : $payment->amount }}"
+                data-is-deferred="{{ $payment->is_deferred ? '1' : '0' }}"
+                data-original-amount="{{ $payment->getOriginal('amount') }}">
+            <i class="fas fa-money-bill-coin"></i> 
+            {{ $payment->is_deferred ? 'Внести платеж' : 'Оплатить' }}
+        </button>
+    @endif
+    
+    @if($payment->status === 'paid' || $payment->is_deferred)
+        <button class="btn btn-sm btn-info payment-details-btn ms-1" 
+                data-payment-id="{{ $payment->id }}"
+                title="Детали платежа">
+            <i class="fas fa-info-circle"></i>
+        </button>
+    @endif
+</td>
+
+
+
+    </tr>
+    @endforeach
+</tbody>
                             </table>
                         </div>
                         
@@ -617,8 +645,37 @@
                     <input type="hidden" id="payment-id" name="payment_id">
                     
                     <div class="mb-3">
-                        <label class="form-label">Сумма платежа</label>
-                        <input type="text" id="payment-amount-display" class="form-control" readonly>
+                        <label class="form-label">Сумма платежа *</label>
+                        <input type="number" 
+                               id="payment-amount-input" 
+                               name="amount" 
+                               class="form-control" 
+                               step="0.01" 
+                               min="0" 
+                               max="9999999.99"
+                               required>
+                        <small class="text-muted">Оригинальная сумма платежа: <span id="original-amount-display">0 ₽</span></small>
+                        <input type="hidden" id="original-amount" value="0">
+                    </div>
+                    
+                    <!-- Чекбокс отсрочки -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="is_deferred" name="is_deferred" value="1">
+                            <label class="form-check-label" for="is_deferred">
+                                <i class="fas fa-clock me-1 text-warning"></i> Зарегистрировать как отсрочку
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            При отсрочке платеж будет отмечен как выполненный с суммой 0 ₽
+                        </small>
+                    </div>
+
+                    <div class="mb-3" id="deferred_reason_container" style="display: none;">
+                        <label class="form-label">Причина отсрочки *</label>
+                        <textarea name="deferred_reason" id="deferred_reason" class="form-control" rows="2" 
+                                  placeholder="Укажите причину отсрочки платежа..." maxlength="500"></textarea>
+                        <small class="text-muted">Например: "Клиент в отпуске", "Технические проблемы с банком" и т.д.</small>
                     </div>
                     
                     <div class="mb-3">
@@ -681,244 +738,100 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Модальное окно регистрации платежа
-    const registerPaymentModal = document.getElementById('registerPaymentModal');
-    if (registerPaymentModal) {
-        registerPaymentModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const paymentId = button.getAttribute('data-payment-id');
-            const paymentAmount = button.getAttribute('data-payment-amount');
-            
-            const modal = this;
-            const amountDisplay = modal.querySelector('#payment-amount-display');
-            const paymentIdInput = modal.querySelector('#payment-id');
-            const form = modal.querySelector('#registerPaymentForm');
-            
-            // Форматируем сумму
-            amountDisplay.value = parseFloat(paymentAmount).toLocaleString('ru-RU', {
-                minimumFractionDigits: 2
-            }) + ' ₽';
-            
-            // Устанавливаем ID платежа
-            paymentIdInput.value = paymentId;
-            
-            // Устанавливаем action формы
-            form.action = `{{ route('deals.payments.register', ['deal' => $deal, 'payment' => ':payment_id']) }}`.replace(':payment_id', paymentId);
-        });
+registerPaymentModal.addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const paymentId = button.getAttribute('data-payment-id');
+    const paymentAmount = button.getAttribute('data-payment-amount');
+    const isDeferred = button.getAttribute('data-is-deferred') === '1';
+    const dealPaymentAmount = button.getAttribute('data-deal-payment-amount');
+    
+    const modal = this;
+    const amountInput = modal.querySelector('#payment-amount-input');
+    const originalAmountDisplay = modal.querySelector('#original-amount-display');
+    const originalAmountHidden = modal.querySelector('#original-amount');
+    const paymentIdInput = modal.querySelector('#payment-id');
+    const form = modal.querySelector('#registerPaymentForm');
+    
+    // Удаляем ВСЕ старые предупреждения
+    const oldWarnings = modal.querySelectorAll('.deferral-warning, .alert.alert-warning, .alert.alert-info');
+    oldWarnings.forEach(warning => warning.remove());
+    
+    // Определяем оригинальную сумму
+    let originalAmountValue;
+    if (isDeferred) {
+        // Для отсрочки используем стандартную сумму платежа по сделке
+        originalAmountValue = parseFloat(dealPaymentAmount) || parseFloat(paymentAmount) || 0;
+    } else {
+        originalAmountValue = parseFloat(paymentAmount) || 0;
     }
     
-    // Градиент для дней до платежа
-    const daysElements = document.querySelectorAll('[class*="days-remaining"]');
-    daysElements.forEach(el => {
-        const days = parseInt(el.textContent);
-        if (!isNaN(days)) {
-            if (days <= 0) {
-                el.classList.add('text-danger', 'fw-bold');
-            } else if (days <= 7) {
-                el.classList.add('text-warning', 'fw-bold');
-            } else {
-                el.classList.add('text-success');
-            }
-        }
-    });
+    // Устанавливаем значения
+    amountInput.value = originalAmountValue.toFixed(2);
+    originalAmountHidden.value = originalAmountValue;
+    originalAmountDisplay.textContent = originalAmountValue.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2
+    }) + ' ₽';
     
-    // Модальное окно деталей платежа
-    const paymentDetailsModal = document.getElementById('paymentDetailsModal');
-    const paymentDetailsContent = document.getElementById('paymentDetailsContent');
+    // Устанавливаем ID платежа
+    paymentIdInput.value = paymentId;
     
-    // Обработчики для кнопок "Подробности"
-    document.querySelectorAll('.payment-details-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const paymentId = this.getAttribute('data-payment-id');
-            loadPaymentDetails(paymentId);
-        });
-    });
+    // Устанавливаем action формы
+    form.action = `{{ route('deals.payments.register', ['deal' => $deal, 'payment' => ':payment_id']) }}`.replace(':payment_id', paymentId);
     
-    // Функция загрузки деталей платежа
-    function loadPaymentDetails(paymentId) {
-        console.log('Загрузка деталей платежа ID:', paymentId);
-        
-        // Показываем индикатор загрузки
-        paymentDetailsContent.innerHTML = `
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Загрузка...</span>
-                </div>
-                <p class="mt-2">Загрузка данных...</p>
-            </div>
+    // Для отсроченных платежей показываем предупреждение
+    if (isDeferred) {
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'alert alert-warning deferral-warning';
+        warningDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Внимание! Это отсроченный платеж.</strong><br>
+            При регистрации оплаты отсрочка будет отменена.
         `;
+        modal.querySelector('.modal-body').prepend(warningDiv);
         
-        // Показываем модальное окно
-        const modal = new bootstrap.Modal(paymentDetailsModal);
-        modal.show();
-        
-        // Формируем URL
-        const url = `{{ route('deals.payments.details', ['deal' => $deal, 'payment' => ':payment_id']) }}`.replace(':payment_id', paymentId);
-        console.log('URL запроса:', url);
-        
-        // Загружаем данные через AJAX
-        fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            console.log('Статус ответа:', response.status);
-            
-            if (!response.ok) {
-                // Получаем текст ошибки
-                return response.text().then(text => {
-                    console.error('Текст ошибки:', text);
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Полученные данные:', data);
-            
-            // Проверяем наличие ошибки
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Форматируем дату
-            let formattedDate = 'Не указана';
-            if (data.paid_at) {
-                try {
-                    const paidAt = new Date(data.paid_at);
-                    formattedDate = paidAt.toLocaleDateString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                } catch (e) {
-                    console.error('Ошибка форматирования даты:', e);
-                    formattedDate = data.paid_at;
-                }
-            }
-            
-            // Создаем HTML с деталями платежа
-            let html = `
-                <div class="payment-details">
-                    <h3 class="border-bottom pb-2 mb-3">Информация о платеже</h3>
-                    
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Номер платежа:</strong></div>
-                        <div class="col-6">${data.payment_number === 0 ? 'Первоначальный взнос' : '№' + data.payment_number}</div>
-                    </div>
-                    
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Сумма:</strong></div>
-                        <div class="col-6">${parseFloat(data.amount).toLocaleString('ru-RU', {minimumFractionDigits: 2})} ₽</div>
-                    </div>
-                    
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Дата оплаты:</strong></div>
-                        <div class="col-6">${formattedDate}</div>
-                    </div>
-                    
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Способ оплаты:</strong></div>
-                        <div class="col-6">${data.payment_method_text || data.payment_method || 'Не указан'}</div>
-                    </div>
+        // Показываем оригинальную сумму
+        if (originalAmountValue > 0) {
+            const originalInfo = document.createElement('div');
+            originalInfo.className = 'alert alert-info deferral-warning mt-2';
+            originalInfo.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Оригинальная сумма платежа:</strong> ${originalAmountValue.toLocaleString('ru-RU', {minimumFractionDigits: 2})} ₽
             `;
-            
-            // Добавляем номер транзакции, если есть
-            if (data.transaction_id) {
-                html += `
-                    <div class="row mb-2">
-                        <div class="col-6"><strong>Номер транзакции:</strong></div>
-                        <div class="col-6">${data.transaction_id}</div>
-                    </div>
-                `;
-            }
-            
-            // Добавляем заметки, если есть
-            if (data.notes) {
-                html += `
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Заметки:</strong>
-                            <div class="bg-light p-3 rounded mt-1">${data.notes}</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Добавляем платежный документ, если есть
-            if (data.payment_document_path) {
-                const fileName = data.payment_document_path.split('/').pop();
-                const fileExt = fileName.split('.').pop().toLowerCase();
-                const fileIcon = fileExt === 'pdf' ? 'bi-file-pdf text-danger' : 
-                                (fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png') ? 'bi-file-image text-success' : 'bi-file-text';
-                
-                // Правильные пути для документов
-                const viewUrl = `{{ route('payment.documents.view', ':filename') }}`.replace(':filename', fileName);
-                const downloadUrl = `{{ route('payment.documents.download', ':filename') }}`.replace(':filename', fileName);
-                
-                html += `
-                    <div class="row mb-2">
-                        <div class="col-12">
-                            <strong>Платежный документ:</strong>
-                            <div class="mt-2">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi ${fileIcon} me-2 fs-5"></i>
-                                    <div>
-                                        <div>${fileName}</div>
-                                        <div class="btn-group btn-group-sm mt-1">
-                                            <a href="${viewUrl}" target="_blank" class="btn btn-outline-primary">
-                                                <i class="fas fa-eye"></i> Просмотреть
-                                            </a>
-                                            <a href="${downloadUrl}" class="btn btn-outline-secondary">
-                                                <i class="fas fa-download"></i> Скачать
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div class="row mb-2">
-                        <div class="col-12">
-                            <strong>Платежный документ:</strong>
-                            <div class="mt-2 text-muted">
-                                <i class="bi bi-file-excel me-1"></i> Документ не прикреплен
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            html += `</div>`;
-            
-            // Вставляем HTML в модальное окно
-            paymentDetailsContent.innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Ошибка загрузки данных:', error);
-            paymentDetailsContent.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Ошибка при загрузке данных платежа.</strong><br>
-                    <small>${error.message}</small>
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="loadPaymentDetails(${paymentId})">
-                            <i class="bi bi-arrow-clockwise"></i> Попробовать снова
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
+            modal.querySelector('.modal-body').prepend(originalInfo);
+        }
+    }
+    
+    // Сбрасываем состояние чекбокса отсрочки
+    const isDeferredCheckbox = modal.querySelector('#is_deferred');
+    const deferredReasonContainer = modal.querySelector('#deferred_reason_container');
+    const deferredReasonTextarea = modal.querySelector('#deferred_reason');
+    
+    if (isDeferredCheckbox) {
+        isDeferredCheckbox.checked = false;
+        isDeferredCheckbox.disabled = isDeferred; // Запрещаем только для уже отсроченных
+    }
+    
+    if (deferredReasonContainer) {
+        deferredReasonContainer.style.display = 'none';
+    }
+    
+    if (deferredReasonTextarea) {
+        deferredReasonTextarea.required = false;
+        deferredReasonTextarea.value = '';
+        deferredReasonTextarea.disabled = isDeferred;
+    }
+    
+    // Сбрасываем поле суммы
+    if (amountInput) {
+        amountInput.readOnly = isDeferred; // Заблокировать для отсроченных
+        if (isDeferred) {
+            amountInput.classList.add('bg-light');
+        } else {
+            amountInput.classList.remove('bg-light');
+        }
     }
 });
+
 </script>
 @endpush
 
