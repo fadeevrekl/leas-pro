@@ -21,13 +21,16 @@ class DealPayment extends Model
         'payment_method',
         'transaction_id',
         'notes',
-        'payment_document_path', // Добавляем поле для пути к платежному документу
+        'payment_document_path',
+        'is_deferred',
+        'deferred_reason'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'due_date' => 'date',
         'paid_at' => 'datetime',
+        'is_deferred' => 'boolean',
     ];
 
     // Статусы платежей
@@ -74,6 +77,10 @@ class DealPayment extends Model
     // Вспомогательные методы
     public function getStatusTextAttribute(): string
     {
+        if ($this->is_deferred) {
+            return 'Отсрочка';
+        }
+        
         return self::getStatuses()[$this->status] ?? 'Неизвестно';
     }
 
@@ -89,28 +96,76 @@ class DealPayment extends Model
 
     public function getIsOverdueAttribute(): bool
     {
+        // Отсроченные платежи не считаются просроченными
+        if ($this->is_deferred) {
+            return false;
+        }
+        
         return $this->status === self::STATUS_PENDING && 
                $this->due_date < Carbon::today();
     }
 
     public function getDaysOverdueAttribute(): ?int
     {
-        if (!$this->is_overdue) {
+        if (!$this->is_overdue || $this->is_deferred) {
             return null;
         }
 
         return Carbon::parse($this->due_date)->diffInDays(Carbon::now());
     }
 
-    /**
-     * Отметить платеж как оплаченный с прикреплением документа
-     */
-public function markAsPaid(string $method = null, string $transactionId = null, string $notes = null, string $documentPath = null): void
+/**
+ * Получить оригинальную сумму платежа (до отсрочки)
+ */
+public function getOriginalAmountAttribute(): float
+{
+    // Пытаемся получить оригинальную сумму из БД
+    $original = $this->getOriginal('amount');
+    
+    if ($original !== null) {
+        return (float) $original;
+    }
+    
+    // Если не удалось, используем текущую сумму
+    return (float) $this->amount;
+}
+
+
+/**
+ * Отметить платеж как оплаченный с прикреплением документа
+ * Обновлено для поддержки отсрочек
+ */
+public function markAsPaid(string $method = null, string $transactionId = null, string $notes = null, string $documentPath = null, bool $isDeferred = false, string $deferredReason = null, float $amount = null): void
 {
     \Log::info("=== Начало markAsPaid() для платежа {$this->id} ===");
+    \Log::info("Параметры: isDeferred = {$isDeferred}, deferredReason = {$deferredReason}, amount = {$amount}, текущий is_deferred = {$this->is_deferred}");
     
     $this->status = self::STATUS_PAID;
-    $this->paid_at = Carbon::now();
+    $this->paid_at = now();
+    
+    // Если отменяем существующую отсрочку
+    if ($this->is_deferred && !$isDeferred) {
+        \Log::info("Отменяем существующую отсрочку");
+        $this->is_deferred = false;
+        $this->deferred_reason = null;
+    } else {
+        $this->is_deferred = $isDeferred;
+        
+        if ($isDeferred) {
+            $this->deferred_reason = $deferredReason;
+        }
+    }
+    
+    // Устанавливаем сумму
+    if ($isDeferred) {
+        // Для отсроченных платежей устанавливаем сумму в 0
+        $this->amount = 0;
+        \Log::info("Платеж помечен как отсрочка, сумма установлена в 0");
+    } elseif ($amount !== null) {
+        // Для обычных платежей используем переданную сумму
+        $this->amount = $amount;
+        \Log::info("Сумма платежа установлена: {$amount}");
+    }
     
     if ($method) {
         $this->payment_method = $method;
@@ -129,14 +184,31 @@ public function markAsPaid(string $method = null, string $transactionId = null, 
     }
     
     $this->save();
-    \Log::info("Платеж {$this->id} помечен как оплаченный");
     
-    // Обновляем статус сделки (а она уже должна обновить клиента и автомобиль)
+    if ($isDeferred) {
+        \Log::info("Платеж {$this->id} помечен как отсрочка");
+        \Log::info("Отсрочка платежа зарегистрирована", [
+            'payment_id' => $this->id,
+            'deferred_reason' => $deferredReason,
+        ]);
+    } else {
+        if ($this->getOriginal('is_deferred')) {
+            \Log::info("Отсрочка платежа {$this->id} отменена");
+        } else {
+            \Log::info("Платеж {$this->id} помечен как оплаченный");
+        }
+    }
+    
+    // Обновляем статус сделки
     \Log::info("Обновляем статус сделки {$this->deal_id}");
     $this->deal->updateStatus();
     
     \Log::info("=== Конец markAsPaid() ===");
 }
+
+
+
+
 
     /**
      * Проверить, есть ли прикрепленный платежный документ
@@ -182,8 +254,96 @@ public function markAsPaid(string $method = null, string $transactionId = null, 
         return storage_path('app/public/' . $this->payment_document_path);
     }
 
+    /**
+     * Получить краткую информацию об отсрочке
+     */
+    public function getDeferredInfoAttribute(): ?string
+    {
+        if (!$this->is_deferred) {
+            return null;
+        }
+        
+        $info = "Отсрочка платежа";
+        
+        if ($this->deferred_reason) {
+            $info .= ": " . $this->deferred_reason;
+        }
+        
+        return $info;
+    }
+
+    /**
+     * Проверка, можно ли зарегистрировать этот платеж как отсрочку
+     */
+    public function canBeDeferred(): bool
+    {
+        // Можно отсрочить только ожидающие платежи
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Scope для получения отсроченных платежей
+     */
+    public function scopeDeferred($query)
+    {
+        return $query->where('is_deferred', true);
+    }
+
+    /**
+     * Scope для получения платежей, которые можно отсрочить
+     */
+    public function scopeCanBeDeferred($query)
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    /**
+     * Получить иконку для типа платежа
+     */
+    public function getPaymentIconAttribute(): string
+    {
+        if ($this->is_deferred) {
+            return 'fa-clock text-warning';
+        }
+        
+        if ($this->status === self::STATUS_PAID) {
+            return 'fa-check-circle text-success';
+        }
+        
+        if ($this->is_overdue) {
+            return 'fa-exclamation-triangle text-danger';
+        }
+        
+        return 'fa-clock text-secondary';
+    }
+
+    /**
+     * Получить CSS класс для строки таблицы
+     */
+    public function getTableRowClassAttribute(): string
+    {
+        if ($this->is_deferred) {
+            return 'table-warning';
+        }
+        
+        if ($this->is_overdue) {
+            return 'table-danger';
+        }
+        
+        if ($this->status === self::STATUS_PAID) {
+            return 'table-success';
+        }
+        
+        return '';
+    }
+
     public function sendReminder(): bool
     {
+        // Не отправляем напоминания для отсроченных платежей
+        if ($this->is_deferred) {
+            return false;
+        }
+        
         // Здесь будет логика отправки SMS
         // Пока просто создаем запись об уведомлении
         DealNotification::create([
@@ -196,5 +356,59 @@ public function markAsPaid(string $method = null, string $transactionId = null, 
         ]);
 
         return true;
+    }
+
+    /**
+     * Создать отсрочку платежа
+     */
+    public function createDeferral(string $reason, int $userId = null): bool
+    {
+        if (!$this->canBeDeferred()) {
+            throw new \Exception('Этот платеж нельзя отсрочить');
+        }
+        
+        $this->markAsPaid(
+            method: self::METHOD_OTHER,
+            notes: $this->notes . "\n\nОтсрочка платежа. " . $reason,
+            isDeferred: true,
+            deferredReason: $reason
+        );
+        
+        // Логируем действие
+        if ($userId) {
+            activity()
+                ->performedOn($this)
+                ->causedBy(\App\Models\User::find($userId))
+                ->withProperties(['reason' => $reason])
+                ->log('Платеж отсрочен');
+        }
+        
+        return true;
+    }
+
+    /**
+     * Получить полную информацию о платеже для отображения
+     */
+    public function getFullInfoAttribute(): array
+    {
+        return [
+            'id' => $this->id,
+            'payment_number' => $this->payment_number === 0 ? 'Первоначальный взнос' : 'Платеж №' . $this->payment_number,
+            'amount' => $this->formatted_amount,
+            'status' => $this->status_text,
+            'due_date' => $this->due_date->format('d.m.Y'),
+            'paid_at' => $this->paid_at ? $this->paid_at->format('d.m.Y H:i') : null,
+            'payment_method' => $this->payment_method_text,
+            'transaction_id' => $this->transaction_id,
+            'notes' => $this->notes,
+            'is_deferred' => $this->is_deferred,
+            'deferred_reason' => $this->deferred_reason,
+            'has_document' => $this->hasPaymentDocument(),
+            'document_name' => $this->payment_document_name,
+            'days_overdue' => $this->days_overdue,
+            'is_overdue' => $this->is_overdue,
+            'icon' => $this->payment_icon,
+            'row_class' => $this->table_row_class,
+        ];
     }
 }
