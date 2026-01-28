@@ -224,7 +224,7 @@ if (auth()->user()->isAdmin()) {
             'client_id' => 'required|exists:clients,id',
             'car_id' => 'required|exists:cars,id',
             'deal_type' => 'required|in:rental,lease',
-            'total_amount' => 'required|numeric|min:0|max:999999999.99',
+            'total_amount' => 'nullable|numeric|min:0|max:999999999.99',
             'initial_payment' => 'nullable|numeric|min:0|max:999999999.99',
             'payment_count' => 'required|integer|min:1|max:365',
             'payment_amount' => 'required|numeric|min:0|max:99999999.99',
@@ -237,6 +237,19 @@ if (auth()->user()->isAdmin()) {
         
         // Добавляем manager_id к валидированным данным
         $validated['manager_id'] = $managerId;
+        
+        
+        // Расчитываем общую сумму сделки: сумма платежа × количество платежей
+$calculatedTotalAmount = $validated['payment_amount'] * $validated['payment_count'];
+
+// Добавляем первоначальный взнос к общей сумме, если он есть
+if (!empty($validated['initial_payment']) && $validated['initial_payment'] > 0) {
+    $calculatedTotalAmount += $validated['initial_payment'];
+}
+
+// Заменяем total_amount в валидированных данных на рассчитанное значение
+$validated['total_amount'] = $calculatedTotalAmount;
+        
         
         // Проверяем автомобиль
         $car = Car::findOrFail($validated['car_id']);
@@ -344,7 +357,7 @@ public function update(Request $request, Deal $deal)
         'car_id' => 'required|exists:cars,id',
         'manager_id' => 'required|exists:users,id',
         'deal_type' => 'required|in:rental,lease',
-        'total_amount' => 'required|numeric|min:0',
+        'total_amount' => 'nullable|numeric|min:0',
         'initial_payment' => 'nullable|numeric|min:0',
         'payment_count' => 'required|integer|min:1|max:365',
         'payment_amount' => 'required|numeric|min:0',
@@ -511,17 +524,40 @@ public function update(Request $request, Deal $deal)
         return back()->with('success', 'Договор успешно загружен. Сделка активирована.');
     }
 
-    /**
-     * Регистрация платежа с возможностью прикрепления документа
-     */
+/**
+ * Регистрация платежа с возможностью прикрепления документа и отсрочки
+ */
 public function registerPayment(Request $request, Deal $deal, DealPayment $payment)
 {
+    // Валидация с учетом отсрочки
     $request->validate([
         'payment_method' => 'required|in:cash,card,transfer,other',
         'transaction_id' => 'nullable|string|max:100',
         'notes' => 'nullable|string',
         'payment_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        'is_deferred' => 'nullable|boolean',
+        'deferred_reason' => 'required_if:is_deferred,true|string|max:500',
+        'amount' => 'required|numeric|min:0|max:9999999.99',
     ]);
+
+    // Проверяем, что платеж принадлежит сделке
+    if ($payment->deal_id != $deal->id) {
+        return back()->with('error', 'Платеж не принадлежит этой сделке.');
+    }
+
+    // Проверяем доступ пользователя
+    $user = auth()->user();
+    $hasAccess = false;
+    
+    if ($user->isAdmin()) {
+        $hasAccess = true;
+    } elseif ($user->isManager()) {
+        $hasAccess = ($deal->manager_id == $user->id);
+    }
+    
+    if (!$hasAccess) {
+        return back()->with('error', 'У вас недостаточно прав для регистрации платежа.');
+    }
 
     // Обработка платежного документа
     $documentPath = null;
@@ -529,21 +565,83 @@ public function registerPayment(Request $request, Deal $deal, DealPayment $payme
         $documentPath = $request->file('payment_document')->store('payment_documents', 'public');
     }
 
-    // Регистрируем платеж
+    // Определяем, это отсрочка или обычный платеж
+    $isDeferred = $request->boolean('is_deferred');
+    $deferredReason = $request->deferred_reason;
+    
+    // Если платеж уже был отсрочен, отменяем отсрочку
+    $wasDeferred = $payment->is_deferred;
+    $originalAmount = $payment->getOriginal('amount') ?: $payment->amount;
+
+    // Подготавливаем заметки
+    $notes = $request->notes;
+    
+    if ($wasDeferred) {
+        // Добавляем информацию об отмене отсрочки
+        $notes = ($notes ? $notes . "\n\n" : '') . 
+                 "=== ОТМЕНА ОТСРОЧКИ ===\n" .
+                 "Отсрочка отменена: " . now()->format('d.m.Y H:i') . "\n" .
+                 "Отменил: " . auth()->user()->name . "\n" .
+                 "Оригинальная сумма отсрочки: 0 ₽\n" .
+                 "Новая сумма платежа: " . number_format($request->amount, 2, '.', ' ') . " ₽";
+        
+        if ($request->notes) {
+            $notes .= "\n\nПримечание менеджера: " . $request->notes;
+        }
+    } elseif ($isDeferred && $deferredReason) {
+        // Новая отсрочка
+        $notes = ($notes ? $notes . "\n\n" : '') . "Отсрочка платежа. Причина: " . $deferredReason;
+    }
+    
+    // Если сумма изменена (не оригинальная), добавляем примечание
+    $registeredAmount = $isDeferred ? 0 : $request->amount;
+    if (abs($registeredAmount - $originalAmount) > 0.01) {
+        $notes = ($notes ? $notes . "\n\n" : '') . 
+                 "Изменена сумма платежа. Оригинальная сумма: " . 
+                 number_format($originalAmount, 2, '.', ' ') . " ₽, " .
+                 "Зарегистрированная сумма: " . 
+                 number_format($registeredAmount, 2, '.', ' ') . " ₽";
+    }
+
+    // Регистрируем платеж с учетом отсрочки
     $payment->markAsPaid(
         $request->payment_method,
         $request->transaction_id,
-        $request->notes,
-        $documentPath
+        $notes,
+        $documentPath,
+        $isDeferred,
+        $deferredReason,
+        $registeredAmount
     );
 
-    // Сбрасываем метку отправки SMS
-    $deal->last_sms_sent_at = null;
-    $deal->save();
-    
+    // Сбрасываем метку отправки SMS (только для обычных платежей)
+    if (!$isDeferred) {
+        $deal->last_sms_sent_at = null;
+        $deal->save();
+    }
 
+    // Логирование
+    \Log::info("Платеж зарегистрирован", [
+        'user_id' => auth()->id(),
+        'deal_id' => $deal->id,
+        'payment_id' => $payment->id,
+        'was_deferred' => $wasDeferred,
+        'is_deferred' => $isDeferred,
+        'deferred_reason' => $deferredReason,
+        'original_amount' => $originalAmount,
+        'registered_amount' => $registeredAmount,
+    ]);
 
-    return back()->with('success', 'Платеж успешно зарегистрирован.');
+    // Сообщение об успехе
+    if ($wasDeferred) {
+        $message = 'Отсрочка отменена. Платеж успешно зарегистрирован';
+    } elseif ($isDeferred) {
+        $message = 'Отсрочка платежа успешно зарегистрирована';
+    } else {
+        $message = 'Платеж успешно зарегистрирован';
+    }
+
+    return back()->with('success', $message);
 }
 
     /**
