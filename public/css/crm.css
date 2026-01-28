@@ -1,0 +1,508 @@
+/* CRM Лизинг - Кастомные стили */
+@font-face {
+  font-family: 'RoadNumbers';
+  src: url('fonts/RoadNumbers.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* для быстрой загрузки */
+}
+/* 1. Цветовая схема */
+/* CRM Leas-Pro - Цветовая палитра */
+:root {
+    /* ==================== ОСНОВНЫЕ ЦВЕТА ==================== */
+    
+    /* Основной синий (брендовый, для акцентов) */
+    --crm-primary: #2563eb;       /* Спокойный синий */
+    --crm-primary-light: #60a5fa; /* Светлый синий */
+    --crm-primary-dark: #1d4ed8;  /* Темный синий */
+    --crm-primary-rgb: 37, 99, 235;
+    
+    /* Вторичный (фиолетовый, для второстепенных акцентов) */
+    --crm-secondary: #7c3aed;     /* Приглушенный фиолетовый */
+    --crm-secondary-light: #a78bfa;
+    --crm-secondary-dark: #5b21b6;
+    --crm-secondary-rgb: 124, 58, 237;
+    
+    /* Нейтральные цвета (фон, текст) */
+    --crm-light: #f8fafc;         /* Светлый фон */
+    --crm-lighter: #f1f5f9;       /* Еще светлее */
+    --crm-dark: #1e293b;          /* Темный текст */
+    --crm-darker: #0f172a;        /* Очень темный */
+    --crm-muted: #64748b;         /* Приглушенный серый */
+    --crm-border: #e2e8f0;        /* Цвет границ */
+    
+    /* ==================== СТАТУСЫ СДЕЛОК ==================== */
+    
+    /* Статус: Активная/В работе */
+    --crm-status-active: #059669;     /* Изумрудный зеленый */
+    --crm-status-active-light: #34d399;
+    --crm-status-active-rgb: 5, 150, 105;
+    
+    /* Статус: Ожидание/На рассмотрении */
+    --crm-status-pending: #f59e0b;    /* Теплый янтарный */
+    --crm-status-pending-light: #fbbf24;
+    --crm-status-pending-rgb: 245, 158, 11;
+    
+    /* Статус: Просрочено/Срочно */
+    --crm-status-overdue: #dc2626;    /* Приглушенный красный */
+    --crm-status-overdue-light: #f87171;
+    --crm-status-overdue-rgb: 220, 38, 38;
+    
+    /* Статус: Завершено/Успешно */
+    --crm-status-completed: #0891b2;  /* Бирюзовый */
+    --crm-status-completed-light: #22d3ee;
+    --crm-status-completed-rgb: 8, 145, 178;
+    
+    /* Статус: Отменено/Отказ */
+    --crm-status-cancelled: #6b7280;  /* Нейтральный серый */
+    --crm-status-cancelled-light: #9ca3af;
+    --crm-status-cancelled-rgb: 107, 114, 128;
+    
+    /* Статус: Черновик/В процессе оформления */
+    --crm-status-draft: #8b5cf6;      /* Светлый фиолетовый */
+    --crm-status-draft-light: #a78bfa;
+    --crm-status-draft-rgb: 139, 92, 246;
+    
+    /* ==================== ТИПЫ СДЕЛОК ==================== */
+    
+    /* Лизинг с выкупом */
+    --crm-deal-lease: #0d9488;        /* Темный бирюзовый */
+    --crm-deal-lease-light: #5eead4;
+    --crm-deal-lease-rgb: 13, 148, 136;
+    
+    /* Аренда без выкупа */
+    --crm-deal-rental: #7c3aed;       /* Фиолетовый */
+    --crm-deal-rental-light: #a78bfa;
+    --crm-deal-rental-rgb: 124, 58, 237;
+    
+    /* Долгосрочная аренда */
+    --crm-deal-longterm: #0284c7;     /* Синий */
+    --crm-deal-longterm-light: #38bdf8;
+    --crm-deal-longterm-rgb: 2, 132, 199;
+    
+    /* ==================== СТАТУСЫ АВТОМОБИЛЕЙ ==================== */
+    
+    /* Доступен */
+    --crm-car-available: #10b981;     /* Зеленый */
+    --crm-car-available-light: #6ee7b7;
+    --crm-car-available-rgb: 16, 185, 129;
+    
+    /* В сделке */
+    --crm-car-in-deal: #f59e0b;       /* Янтарный */
+    --crm-car-in-deal-light: #fcd34d;
+    --crm-car-in-deal-rgb: 245, 158, 11;
+    
+    /* На обслуживании */
+    --crm-car-maintenance: #8b5cf6;   /* Фиолетовый */
+    --crm-car-maintenance-light: #c4b5fd;
+    --crm-car-maintenance-rgb: 139, 92, 246;
+    
+    /* Продан/Выкуплен */
+    --crm-car-sold: #6b7280;          /* Серый */
+    --crm-car-sold-light: #d1d5db;
+    --crm-car-sold-rgb: 107, 114, 128;
+    
+    /* В резерве */
+    --crm-car-reserved: #ec4899;      /* Розовый */
+    --crm-car-reserved-light: #f9a8d4;
+    --crm-car-reserved-rgb: 236, 72, 153;
+    
+    /* ==================== ПЛАТЕЖИ ==================== */
+    
+    /* Оплачен вовремя */
+    --crm-payment-paid: #10b981;      /* Зеленый */
+    --crm-payment-paid-rgb: 16, 185, 129;
+    
+    /* Ожидает оплаты */
+    --crm-payment-pending: #f59e0b;   /* Янтарный */
+    --crm-payment-pending-rgb: 245, 158, 11;
+    
+    /* Просрочен */
+    --crm-payment-overdue: #ef4444;   /* Красный */
+    --crm-payment-overdue-rgb: 239, 68, 68;
+    
+    /* Частично оплачен */
+    --crm-payment-partial: #8b5cf6;   /* Фиолетовый */
+    --crm-payment-partial-rgb: 139, 92, 246;
+    
+    /* ==================== ИНВЕСТОРЫ ==================== */
+    
+    /* Высокая доходность */
+    --crm-investor-high: #059669;     /* Темный зеленый */
+    --crm-investor-high-rgb: 5, 150, 105;
+    
+    /* Средняя доходность */
+    --crm-investor-medium: #0d9488;   /* Бирюзовый */
+    --crm-investor-medium-rgb: 13, 148, 136;
+    
+    /* Низкая доходность */
+    --crm-investor-low: #7c3aed;      /* Фиолетовый */
+    --crm-investor-low-rgb: 124, 58, 237;
+    
+    /* ==================== СИСТЕМНЫЕ ЦВЕТА ==================== */
+    
+    /* Успех (позитивные действия) */
+    --crm-success: #10b981;
+    --crm-success-light: #a7f3d0;
+    --crm-success-rgb: 16, 185, 129;
+    
+    /* Предупреждение (внимание) */
+    --crm-warning: #f59e0b;
+    --crm-warning-light: #fde68a;
+    --crm-warning-rgb: 245, 158, 11;
+    
+    /* Ошибка (критические проблемы) */
+    --crm-error: #dc2626;
+    --crm-error-light: #fca5a5;
+    --crm-error-rgb: 220, 38, 38;
+    
+    /* Информация (уведомления) */
+    --crm-info: #3b82f6;
+    --crm-info-light: #93c5fd;
+    --crm-info-rgb: 59, 130, 246;
+    
+    /* ==================== ДОПОЛНИТЕЛЬНЫЕ ==================== */
+    
+    /* Градиенты */
+    --crm-gradient-primary: linear-gradient(135deg, var(--crm-primary), var(--crm-secondary));
+    --crm-gradient-success: linear-gradient(135deg, var(--crm-success), var(--crm-status-active));
+    --crm-gradient-warning: linear-gradient(135deg, var(--crm-warning), #f97316);
+    
+    /* Тени с цветом */
+    --crm-shadow-primary: 0 4px 12px rgba(var(--crm-primary-rgb), 0.15);
+    --crm-shadow-success: 0 4px 12px rgba(var(--crm-success-rgb), 0.15);
+    --crm-shadow-warning: 0 4px 12px rgba(var(--crm-warning-rgb), 0.15);
+    
+    /* Прозрачности */
+    --crm-bg-primary-10: rgba(var(--crm-primary-rgb), 0.1);
+    --crm-bg-success-10: rgba(var(--crm-success-rgb), 0.1);
+    --crm-bg-warning-10: rgba(var(--crm-warning-rgb), 0.1);
+    --crm-bg-error-10: rgba(var(--crm-error-rgb), 0.1);
+    
+    /* Доп цвета  */
+    --crm-bg-yellow: #ffe71f;
+    --crm-bg-dark-gray: #393939;
+    --crm-bg-red:#d51813;
+    --crm-bg-green:#2fb344;
+     --crm-bg-orange:#de5d06;
+}
+.badge {
+    min-width: 90px!important;
+}
+.bg-deal-end{
+    background-color: var(--crm-deal-longterm);
+    color:#f8f8f8;
+}
+.bg-deal-active{
+      background-color: var(--crm-bg-yellow);
+    color:#393939;  
+}
+.bg-deal-draw{
+         background-color: var(--crm-bg-dark-gray);
+    color:#f8f8f8;  
+}
+.bg-deal-overdue{
+          background-color: var(--crm-bg-red);
+    color:#f8f8f8;    
+    
+}
+.bg-free{
+            background-color: var(--crm-bg-green);
+    color:#f8f8f8;   
+}
+.bg-warning{
+    background-color: var(--crm-bg-orange);
+    color:#f8f8f8; 
+}
+.bg-danger{
+    background-color: var(--crm-bg-red);
+    color:#f8f8f8; 
+}
+.license-plate{
+     border: 1px solid #c0c0c0;
+    border-radius: 5px;
+    padding: 5px;
+
+    color: #000;
+    font-size: 14px !important;
+    min-width: 100px !important;
+    width: fit-content;
+    text-align: center;
+}
+.main-gradient{
+   background: var(--crm-gradient-success);
+}
+
+.card {
+    border-radius: 8px;
+    overflow: hidden; /* Чтобы углы карточки и header совпадали */
+    box-shadow: 0 0 4px rgba(31, 41, 55, 0.05);
+}
+
+.card-header-crm {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+#dealHistoryModal .table td{
+font-size: 0.8rem!important;
+}
+
+
+/* 2. Основные стили для CRM */
+body {
+    /* font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; */
+}
+
+
+
+
+/* 3. Навигация */
+.navbar-crm {
+    /* background: linear-gradient(135deg, var(--crm-dark), #374151);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); */
+}
+
+.navbar-brand-crm {
+    /* font-weight: 700; */
+    /* font-size: 1.3rem; */
+}
+
+
+/* 5. Таблицы */
+.table-crm {
+    /* border-radius: 10px;
+    overflow: hidden; */
+}
+
+.table-crm thead th {
+    /* background-color: #f1f5f9;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem; */
+}
+
+/* 6. Кнопки */
+.btn-crm {
+    /* border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem; */
+}
+
+.btn-crm-primary {
+    /* background: linear-gradient(135deg, var(--crm-primary), var(--crm-secondary));
+    border: none; */
+}
+
+/* 7. Статусы */
+.status-available { /* background-color: var(--crm-success); */ }
+.status-in_deal { /* background-color: var(--crm-warning); */ }
+.status-maintenance { /* background-color: #4299e1; */ }
+.status-sold { /* background-color: #a0aec0; */ }
+
+/* 8. Анимации */
+
+
+
+
+/* Навигация */
+.navbar {
+    /* background: linear-gradient(135deg, var(--crm-dark), #374151);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); */
+}
+
+.navbar-brand {
+    /* font-weight: 700;
+    font-size: 1.3rem; */
+}
+
+.nav-link {
+    /* font-weight: 500;
+    border-radius: 8px;
+    margin: 0 2px;
+    transition: all 0.3s ease; */
+}
+
+.nav-link:hover, .nav-link.active {
+    /* background-color: rgba(255,255,255,0.1); */
+}
+
+
+
+/* Badges */
+.badge {
+    /* border-radius: 20px;
+    padding: 0.4em 0.8em;
+    font-weight: 500; */
+}
+
+.status-available { /* background-color: var(--crm-success); */ }
+.status-in_deal { /* background-color: var(--crm-warning); */ }
+.status-maintenance { /* background-color: #4299e1; */ }
+.status-sold { /* background-color: #a0aec0; */ }
+
+/* Формы */
+.form-control, .form-select {
+    /* border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    padding: 0.75rem 1rem; */
+}
+
+.form-control:focus, .form-select:focus {
+    /* border-color: var(--crm-primary);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1); */
+}
+
+/* Прогресс-бары */
+.progress {
+    /* border-radius: 10px;
+    height: 10px; */
+}
+
+/* Уведомления */
+.alert {
+    /* border-radius: 10px;
+    border: none; */
+}
+
+/* Пагинация */
+.pagination .page-link {
+    /* border-radius: 8px;
+    margin: 0 3px; */
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .navbar-nav {
+        /* padding: 1rem 0; */
+    }
+    
+    .card {
+        /* margin-bottom: 1rem; */
+    }
+    
+    .table-responsive {
+        /* border-radius: 10px; */
+    }
+}
+
+
+
+
+/****Стили тура****/
+
+ .shepherd-theme-custom {
+        border-radius: 8px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        max-width: 450px;
+        min-width: 350px;
+        z-index: 999999;
+    }
+    .shepherd-theme-crm{
+        z-index: 999999; 
+    }
+    
+    .shepherd-header {
+        background: linear-gradient(135deg, #0284c7 0%, #0073ae 100%)!important;
+        border-radius: 10px 10px 0 0;
+        padding: 15px 20px;
+    }
+    
+    .shepherd-title {
+        color: white;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .shepherd-cancel-icon {
+        color: white !important;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    .shepherd-cancel-icon:hover {
+        color: #ffc107 !important;
+    }
+    
+    .shepherd-text {
+        font-size: 15px;
+        line-height: 2.2em;
+        color: #2c3e50;
+        padding: 20px;
+    }
+    
+    .shepherd-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    .shepherd-button {
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .shepherd-button.shepherd-button-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .shepherd-button.shepherd-button-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .shepherd-button:not(.shepherd-button-secondary) {
+        background: #28a745;
+        color: white;
+    }
+    
+    .shepherd-button:not(.shepherd-button-secondary):hover {
+        background: #218838;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+    }
+    
+    /* Оверлей */
+    .shepherd-modal-overlay-container {
+        z-index: 9999 !important;
+    }
+    
+    .shepherd-modal-overlay-container .shepherd-modal-overlay {
+        opacity: 0.7 !important;
+        background: #000 !important;
+    }
+    
+    /* Подсветка элемента */
+    .shepherd-target.shepherd-enabled {
+        position: relative;
+        z-index: 999999;
+    }
+    
+    .shepherd-element.shepherd-attached-top.shepherd-attached-center.shepherd-target-attached-bottom.shepherd-target-attached-center,
+    .shepherd-element.shepherd-attached-bottom.shepherd-attached-center.shepherd-target-attached-top.shepherd-target-attached-center,
+    .shepherd-element.shepherd-attached-right.shepherd-attached-middle.shepherd-target-attached-left.shepherd-target-attached-middle,
+    .shepherd-element.shepherd-attached-left.shepherd-attached-middle.shepherd-target-attached-right.shepherd-target-attached-middle {
+        z-index: 999999;
+    }
+    .shepherd-element{
+        max-width: 500px!important;
+    }
+    
+    /* Стрелка */
+    .shepherd-arrow {
+        border-width: 16px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+    
+    .shepherd-arrow:before {
+        border-width: 16px;
+    }

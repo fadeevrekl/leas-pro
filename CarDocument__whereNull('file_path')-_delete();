@@ -1,0 +1,29 @@
+[90m= [39m[34;4mIlluminate\Database\Eloquent\Collection[39;24m {#6113
+    [34mall[39m: [
+      [34;4mApp\Models\CarDocument[39;24m {#6116
+        [34mid[39m: [35m7[39m,
+        [34mcar_id[39m: [35m8[39m,
+        [34mtype[39m: "[32msts[39m",
+        [34mdocument_number[39m: "[32m2[39m",
+        [34missue_date[39m: [36mnull[39m,
+        [34mexpiry_date[39m: [36mnull[39m,
+        [34mfile_path[39m: [36mnull[39m,
+        [34mnotes[39m: [36mnull[39m,
+        [34mcreated_at[39m: "[32m2026-01-22 22:22:12[39m",
+        [34mupdated_at[39m: "[32m2026-01-22 22:22:12[39m",
+      },
+      [34;4mApp\Models\CarDocument[39;24m {#6117
+        [34mid[39m: [35m8[39m,
+        [34mcar_id[39m: [35m8[39m,
+        [34mtype[39m: "[32mosago[39m",
+        [34mdocument_number[39m: "[32m3[39m",
+        [34missue_date[39m: [36mnull[39m,
+        [34mexpiry_date[39m: [36mnull[39m,
+        [34mfile_path[39m: [36mnull[39m,
+        [34mnotes[39m: [36mnull[39m,
+        [34mcreated_at[39m: "[32m2026-01-22 22:22:17[39m",
+        [34mupdated_at[39m: "[32m2026-01-22 22:22:17[39m",
+      },
+    ],
+  }
+

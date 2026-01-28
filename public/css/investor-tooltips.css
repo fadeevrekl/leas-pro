@@ -1,0 +1,50 @@
+/* investor-tooltips.css */
+.info-icon {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 1000 !important;
+    font-size: 1rem !important;
+    color: #6c757d !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+   
+ 
+    width: 22px !important;
+    height: 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+}
+
+.info-icon:hover {
+    color: #007bff !important;
+    transform: scale(1.1) !important;
+
+
+}
+
+/* Цвета для разных типов карточек */
+.card.border-primary .info-icon:hover { color: #007bff !important; }
+.card.border-success .info-icon:hover { color: #198754 !important; }
+.card.border-warning .info-icon:hover { color: #ffc107 !important; }
+.card.border-info .info-icon:hover { color: #0dcaf0 !important; }
+
+/* Большие подсказки */
+.custom-tooltip .tooltip-inner {
+    max-width: 500px !important;
+    width: 500px !important;
+    min-width: 400px !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    padding: 15px !important;
+}
+
+@media (max-width: 768px) {
+    .custom-tooltip .tooltip-inner {
+        max-width: 300px !important;
+        width: 300px !important;
+        min-width: 280px !important;
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "times-roman": {
+        "normal": "\/var\/www\/u3381403\/data\/www\/crm-lease\/storage\/fonts\/\/times_roman_normal_a4f974236770e899da7a397b3fabbb2c",
+        "bold": "\/var\/www\/u3381403\/data\/www\/crm-lease\/storage\/fonts\/\/times_roman_bold_17e41259db45aa40ea30518ec67ad8c6",
+        "italic": "times_roman_italic_b78255e26de63a07c797afce69eb825c",
+        "bold_italic": "\/var\/www\/u3381403\/data\/www\/crm-lease\/vendor\/dompdf\/dompdf\/lib\/fonts\/Times-BoldItalic"
+    }
+}
